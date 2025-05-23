@@ -2,30 +2,45 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Equipment status type
-CREATE TYPE equipment_status AS ENUM (
-  'stored', 
-  'maintenance', 
-  'replaced', 
-  'in-use', 
-  'need-replacement'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'equipment_status') THEN
+    CREATE TYPE equipment_status AS ENUM (
+      'stored', 
+      'maintenance', 
+      'replaced', 
+      'in-use', 
+      'need-replacement'
+    );
+  END IF;
+END$$;
 
 -- Building type enum
-CREATE TYPE building_type AS ENUM (
-  'classroom',
-  'office',
-  'warehouse'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'building_type') THEN
+    CREATE TYPE building_type AS ENUM (
+      'classroom',
+      'office',
+      'warehouse'
+    );
+  END IF;
+END$$;
 
 -- Delete reason enum
-CREATE TYPE delete_reason AS ENUM (
-  'broken',
-  'obsolete',
-  'other'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'delete_reason') THEN
+    CREATE TYPE delete_reason AS ENUM (
+      'broken',
+      'obsolete',
+      'other'
+    );
+  END IF;
+END$$;
 
 -- Equipment table
-CREATE TABLE equipment (
+CREATE TABLE IF NOT EXISTS equipment (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   model VARCHAR(255) NOT NULL,
   equipment_type VARCHAR(50) NOT NULL,
@@ -39,7 +54,7 @@ CREATE TABLE equipment (
 );
 
 -- Locations table
-CREATE TABLE locations (
+CREATE TABLE IF NOT EXISTS locations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   room_name VARCHAR(255) NOT NULL UNIQUE,
   building_type building_type NOT NULL,
@@ -47,14 +62,14 @@ CREATE TABLE locations (
 );
 
 -- Equipment location table (current location of equipment)
-CREATE TABLE equipment_location (
+CREATE TABLE IF NOT EXISTS equipment_location (
   equipment_id UUID PRIMARY KEY REFERENCES equipment(id) ON DELETE CASCADE,
   location_id UUID NOT NULL REFERENCES locations(id),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Equipment transfer history table
-CREATE TABLE equipment_transfer_history (
+CREATE TABLE IF NOT EXISTS equipment_transfer_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   equipment_id UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
   from_location_id UUID NOT NULL REFERENCES locations(id),

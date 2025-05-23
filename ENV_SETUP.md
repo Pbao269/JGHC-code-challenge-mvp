@@ -4,7 +4,7 @@ To connect your application to Supabase, you need to set up the required environ
 
 ## Setting up `.env.local` file
 
-1. Create a new file named `.env.local` in the `frontend` directory
+1. Create a new file named `.env.local` in the project root directory
 2. Add the following content to the file:
 
 ```
@@ -35,6 +35,6 @@ After setting up your environment variables:
 3. The application should be able to connect to your Supabase backend
 
 If you're still experiencing connection issues, verify that:
-- The `.env.local` file is in the correct location (frontend directory)
+- The `.env.local` file is in the correct location (project root directory)
 - There are no typos in the variable names or values
 - Your Supabase project is active and not paused 

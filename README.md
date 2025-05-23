@@ -23,7 +23,6 @@ A comprehensive inventory management system for equipment tracking with real-tim
 
 ## Setup Instructions
 
-
 - Node.js (v16+)
 - npm or yarn
 - Supabase account
@@ -38,7 +37,7 @@ A comprehensive inventory management system for equipment tracking with real-tim
 
 ### Step 2: Configure Environment Variables
 
-1. In the frontend directory, create a `.env` file with the following content:
+1. Create a `.env` file in the project root with the following content:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -48,9 +47,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ### Step 3: Install Dependencies and Run the Application
 
 ```bash
-# Navigate to the frontend directory
-cd frontend
-
 # Install dependencies
 npm install
 # or
@@ -67,7 +63,6 @@ yarn dev
 ## Project Structure
 
 ```
-frontend/
 ├── app/                  # Next.js app directory
 ├── components/           # React components
 │   ├── ui/               # Shadcn UI components
