@@ -121,7 +121,7 @@ language sql security definer as $$
    where id = any(p_ids);
 $$;
 
--- RPC function to permanently delete equipment older than cutoff date
+-- permanently delete equipment older than cutoff date
 CREATE OR REPLACE FUNCTION permanently_delete_old_equipment(cutoff_date TIMESTAMPTZ)
 RETURNS INTEGER AS $$
 DECLARE
