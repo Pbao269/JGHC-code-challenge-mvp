@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { PlusCircle, Search, Boxes, School, Building2, FilterX, Settings, MoveRight, AlertCircle, Trash2 } from "lucide-react"
+import { PlusCircle, Search, Boxes, School, Building2, FilterX, Settings, MoveRight, AlertCircle, Trash2, Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import EquipmentForm from "@/components/equipment-form"
 import MultipleStatusChange from "@/components/multiple-status-change"
 import MultipleTransfer from "@/components/multiple-transfer"
 import MultipleDelete from "@/components/multiple-delete"
+import DeletedItemsView from "@/components/deleted-items-view"
 import type { Equipment, BuildingType, EquipmentStatus } from "@/lib/types"
 import { getRoomById, allRooms } from "@/lib/rooms"
 import { 
@@ -43,6 +44,9 @@ export default function InventoryDashboard() {
   const [isMultipleSelect, setIsMultipleSelect] = useState(false)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [multipleAction, setMultipleAction] = useState<"transfer" | "status" | "delete" | null>(null)
+
+  // State for deleted items view
+  const [showDeletedItems, setShowDeletedItems] = useState(false)
 
   // Initialize database and fetch data on component mount
   useEffect(() => {
@@ -120,7 +124,7 @@ export default function InventoryDashboard() {
 
   // Handles adding new equipment
   const handleAddEquipment = async (
-    newEquipment: Omit<Equipment, "id" | "dateAdded" | "lastUpdated" | "roomId" | "status">[],
+    newEquipment: Omit<Equipment, "id" | "status" | "dateAdded" | "lastUpdated" | "roomId" | "buildingType" | "roomName">[],
   ) => {
     try {
       setIsLoading(true)
@@ -152,15 +156,28 @@ export default function InventoryDashboard() {
   }
 
   // Handles updating existing equipment
-  const handleUpdateEquipment = async (updatedEquipment: Equipment) => {
+  const handleUpdateEquipment = async (updatedEquipmentList: Omit<Equipment, "id" | "status" | "dateAdded" | "lastUpdated" | "roomId" | "buildingType" | "roomName">[]) => {
     try {
       setIsLoading(true)
-      const result = await updateEquipmentApi(updatedEquipment)
+      
+      if (!editingEquipment || updatedEquipmentList.length === 0) {
+        throw new Error("Invalid equipment data for update")
+      }
+      
+      // Reconstruct the complete equipment object with preserved fields
+      const updatedData = updatedEquipmentList[0]
+      const completeEquipment: Equipment = {
+        ...editingEquipment, // Preserve id, status, dateAdded, etc.
+        ...updatedData,      // Apply the form updates
+        lastUpdated: new Date().toISOString() // Update timestamp
+      }
+      
+      const result = await updateEquipmentApi(completeEquipment)
       
       if (result) {
         setEquipment(
           equipment.map((item) => {
-            if (item.id === updatedEquipment.id) {
+            if (item.id === editingEquipment.id) {
               return result
             }
             return item
@@ -495,6 +512,10 @@ export default function InventoryDashboard() {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Multiple Delete
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowDeletedItems(true)}>
+                      <Archive className="mr-2 h-4 w-4" />
+                      View Deleted Items
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
@@ -675,6 +696,13 @@ export default function InventoryDashboard() {
           existingEquipment={equipment}
         />
       )}
+
+      {/* Deleted Items View */}
+      <DeletedItemsView
+        isOpen={showDeletedItems}
+        onClose={() => setShowDeletedItems(false)}
+      />
     </div>
   )
 }
+

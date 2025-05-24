@@ -77,14 +77,50 @@ const mapClientEquipmentToDb = (e: Equipment) => ({
   delete_note: e.deleteNote ?? null,
 })
 
-// fetch all
+// fetch all active (non-deleted) equipment
 export async function getAllEquipment(): Promise<Equipment[]> {
-  const { data, error } = await supabase.from("equipment_with_location").select("*")
+  const { data, error } = await supabase
+    .from("equipment_with_location")
+    .select("*")
+    .is("delete_reason", null) // Only get items that are not soft-deleted
+  
   if (error || !data) {
     console.error("Error fetching equipment:", error?.message)
     return []
   }
   return data.map(mapDbEquipmentToClient)
+}
+
+// fetch only soft-deleted equipment
+export async function getDeletedEquipment(): Promise<Equipment[]> {
+  const { data, error } = await supabase
+    .from("equipment_with_location")
+    .select("*")
+    .not("delete_reason", "is", null) // Only get items that are soft-deleted
+    .order("last_updated", { ascending: false }) // Most recently deleted first
+  
+  if (error || !data) {
+    console.error("Error fetching deleted equipment:", error?.message)
+    return []
+  }
+  return data.map(mapDbEquipmentToClient)
+}
+
+// permanently delete equipment older than specified days
+export async function permanentlyDeleteOldEquipment(daysOld: number = 3): Promise<{ deletedCount: number; error?: string }> {
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - daysOld)
+  
+  const { data, error } = await supabase.rpc("permanently_delete_old_equipment", {
+    cutoff_date: cutoffDate.toISOString()
+  })
+  
+  if (error) {
+    console.error("Error permanently deleting old equipment:", error.message)
+    return { deletedCount: 0, error: error.message }
+  }
+  
+  return { deletedCount: data || 0 }
 }
 
 // add rows
@@ -121,27 +157,38 @@ export async function addEquipment(
 
 // update
 export async function updateEquipment(updated: Equipment): Promise<Equipment | null> {
+  // Validate that required fields are present
+  if (!updated.id) {
+    console.error("Equipment ID is missing:", updated.id)
+    return null
+  }
+  
   const now = new Date().toISOString()
-  const { data, error } = await supabase
+  const dbData = mapClientEquipmentToDb(updated)
+  
+  const { error } = await supabase
     .from("equipment")
-    .update({ ...mapClientEquipmentToDb(updated), last_updated: now })
+    .update({ ...dbData, last_updated: now })
     .eq("id", updated.id)
-    .select()
-    .single()
-  if (error || !data) {
+  
+  if (error) {
     console.error("Update equipment error:", error?.message)
     return null
   }
-  const loc =
-    updated.roomId && isUuid(updated.roomId)
-      ? { id: updated.roomId }
-      : await getDbLocationByLocalId(updated.roomId)
-  return mapDbEquipmentToClient({
-    ...data,
-    location_id: loc.id,
-    room_name: updated.roomName,
-    building_type: updated.buildingType,
-  })
+
+  // Fetch the updated equipment with location data from the view
+  const { data: updatedData, error: fetchError } = await supabase
+    .from("equipment_with_location")
+    .select("*")
+    .eq("id", updated.id)
+    .single()
+  
+  if (fetchError || !updatedData) {
+    console.error("Fetch updated equipment error:", fetchError?.message)
+    return null
+  }
+
+  return mapDbEquipmentToClient(updatedData as DbEquipmentWithLocation)
 }
 
 // delete
@@ -264,3 +311,4 @@ export async function verifyDatabaseSchema(): Promise<boolean> {
   }
   return true
 }
+
