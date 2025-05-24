@@ -10,9 +10,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   db:     { schema: "public" },
 });
 
-/* ------------------------------------------------------------------ */
-/*  🔌  LIGHT-WEIGHT CONNECTIVITY CHECK                                 */
-/* ------------------------------------------------------------------ */
+
+// LIGHT-WEIGHT CONNECTIVITY CHECK 
 
 export async function testSupabaseConnection(): Promise<boolean> {
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -20,7 +19,6 @@ export async function testSupabaseConnection(): Promise<boolean> {
     return false;
   }
 
-  /* simplest: HEAD-only select on a table that must exist */
   const { error } = await supabase
     .from("locations")
     .select("id", { head: true });

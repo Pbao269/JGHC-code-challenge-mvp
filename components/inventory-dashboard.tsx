@@ -24,11 +24,8 @@ import {
   deleteMultipleEquipment as deleteMultipleEquipmentApi,
   updateMultipleStatus as updateMultipleStatusApi,
   transferMultipleEquipment as transferMultipleEquipmentApi,
-  initializeRooms,
-  verifyDatabaseSchema
-} from "@/lib/api"
+  initializeRooms} from "@/lib/api"
 import { testSupabaseConnection } from "@/lib/supabase"
-import { initializeDatabaseSchema } from "@/lib/initSchema"
 
 // Main inventory dashboard component that manages equipment and locations
 export default function InventoryDashboard() {
@@ -59,20 +56,6 @@ export default function InventoryDashboard() {
         const isConnected = await testSupabaseConnection();
         if (!isConnected) {
           throw new Error("Failed to connect to Supabase. Please check your connection and credentials in .env.local file.");
-        }
-        
-        // Initialize database schema
-        console.log("Checking and initializing database schema if needed...");
-        try {
-          const isSchemaInitialized = await initializeDatabaseSchema();
-          if (isSchemaInitialized) {
-            console.log("Database schema initialized or already exists");
-          } else {
-            console.warn("Schema initialization failed - will try to continue anyway");
-          }
-        } catch (initError) {
-          console.error("Schema initialization error:", initError);
-          console.warn("Continuing with initialization despite schema error...");
         }
         
         // Initialize rooms
@@ -246,12 +229,7 @@ export default function InventoryDashboard() {
         throw new Error("Equipment not found")
       }
       
-      const currentRoom = getRoomById(equipmentToTransfer.roomId)
       const newRoom = getRoomById(roomId)
-      
-      if (!currentRoom) {
-        throw new Error(`Current room (${equipmentToTransfer.roomId}) not found for equipment ${id}`)
-      }
       
       if (!newRoom) {
         throw new Error(`Destination room (${roomId}) not found`)
@@ -260,11 +238,12 @@ export default function InventoryDashboard() {
       let newStatus = equipmentToTransfer.status
       
       // Update status based on transfer direction
-      if (currentRoom.buildingType === "warehouse" && newRoom.buildingType !== "warehouse") {
+      const currentType = equipmentToTransfer.buildingType;
+      if (currentType === "warehouse" && newRoom.buildingType !== "warehouse") {
         if (equipmentToTransfer.status === "stored" || equipmentToTransfer.status === "maintenance") {
           newStatus = "in-use"
         }
-      } else if (currentRoom.buildingType !== "warehouse" && newRoom.buildingType === "warehouse") {
+      } else if (currentType !== "warehouse" && newRoom.buildingType === "warehouse") {
         if (equipmentToTransfer.status === "in-use") {
           newStatus = "stored"
         } else if (equipmentToTransfer.status === "need-replacement") {
@@ -326,18 +305,14 @@ export default function InventoryDashboard() {
           throw new Error(`Equipment with ID ${id} not found`)
         }
         
-        const currentRoom = getRoomById(item.roomId)
-        if (!currentRoom) {
-          throw new Error(`Current room (${item.roomId}) not found for equipment ${id}`)
-        }
-        
         let newStatus = item.status
         
-        if (currentRoom.buildingType === "warehouse" && newRoom.buildingType !== "warehouse") {
+        const currentType = item.buildingType
+        if (currentType === "warehouse" && newRoom.buildingType !== "warehouse") {
           if (item.status === "stored" || item.status === "maintenance") {
             newStatus = "in-use"
           }
-        } else if (currentRoom.buildingType !== "warehouse" && newRoom.buildingType === "warehouse") {
+        } else if (currentType !== "warehouse" && newRoom.buildingType === "warehouse") {
           if (item.status === "in-use") {
             newStatus = "stored"
           } else if (item.status === "need-replacement") {
@@ -456,8 +431,7 @@ export default function InventoryDashboard() {
     }
 
     if (activeTab !== "all") {
-      const room = getRoomById(item.roomId)
-      matchesLocation = room?.buildingType === activeTab
+      matchesLocation = item.buildingType === activeTab
     }
 
     return matchesSearch && matchesStatus && matchesLocation
@@ -574,10 +548,7 @@ export default function InventoryDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "warehouse"
-              }).length}
+              {equipment.filter((item) => item.buildingType === "warehouse").length}
             </p>
           </CardContent>
         </Card>
@@ -590,10 +561,7 @@ export default function InventoryDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "classroom"
-              }).length}
+              {equipment.filter((item) => item.buildingType === "classroom").length}
             </p>
           </CardContent>
         </Card>
@@ -606,10 +574,7 @@ export default function InventoryDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "office"
-              }).length}
+              {equipment.filter((item) => item.buildingType === "office").length}
             </p>
           </CardContent>
         </Card>
@@ -658,28 +623,19 @@ export default function InventoryDashboard() {
               value="warehouse"
               className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
             >
-              Warehouse ({equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "warehouse"
-              }).length})
+              Warehouse ({equipment.filter((item) => item.buildingType === "warehouse").length})
             </TabsTrigger>
             <TabsTrigger
               value="classroom"
               className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
             >
-              Classroom ({equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "classroom"
-              }).length})
+              Classroom ({equipment.filter((item) => item.buildingType === "classroom").length})
             </TabsTrigger>
             <TabsTrigger
               value="office"
               className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
             >
-              Office ({equipment.filter((item) => {
-                const room = getRoomById(item.roomId)
-                return room?.buildingType === "office"
-              }).length})
+              Office ({equipment.filter((item) => item.buildingType === "office").length})
             </TabsTrigger>
           </TabsList>
         </Tabs>

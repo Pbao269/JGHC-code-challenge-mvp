@@ -19,7 +19,11 @@ export interface Equipment {
   serialNumber: string
   dateImported: string // MM/YYYY format
   status: EquipmentStatus
-  roomId: string
+
+  roomId: string                
+  roomName: string              
+  buildingType: BuildingType    
+
   dateAdded: string
   lastUpdated: string
   deleteReason?: string
