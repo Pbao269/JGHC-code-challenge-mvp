@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Boxes, School, Building2, Search, AlertCircle } from "lucide-react"
 import type { Equipment, BuildingType } from "@/lib/types"
-import { allRooms, getRoomById, searchRoomsByPrefix } from "@/lib/rooms"
+import { allRooms, searchRoomsByPrefix } from "@/lib/rooms"
 
 interface MultipleTransferProps {
   selectedItems: string[]
@@ -95,14 +95,13 @@ export default function MultipleTransfer({
 
   // Check if all selected items are from the same location type
   const allSameLocationType = selectedEquipmentItems.length > 0 && selectedEquipmentItems.every((item) => {
-    const room = getRoomById(item.roomId)
-    return room?.buildingType === getRoomById(selectedEquipmentItems[0].roomId)?.buildingType
+    return item.buildingType === selectedEquipmentItems[0].buildingType
   })
 
   // Get the location type of the selected items
   const currentLocationType =
     allSameLocationType && selectedEquipmentItems.length > 0 
-      ? getRoomById(selectedEquipmentItems[0].roomId)?.buildingType 
+      ? selectedEquipmentItems[0].buildingType 
       : null
 
   return (

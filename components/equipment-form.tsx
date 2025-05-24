@@ -118,9 +118,11 @@ export default function EquipmentForm({
   }
 
   const handleSelect = (field: string, value: string) => {
-    equipment
-      ? setFormData((p) => ({ ...p, [field]: value }))
-      : setCommonData((p) => ({ ...p, [field]: value }))
+    if (equipment) {
+      setFormData((p) => ({ ...p, [field]: value }))
+    } else {
+      setCommonData((p) => ({ ...p, [field]: value }))
+    }
     clearError(field as keyof typeof errors)
   }
 
@@ -159,7 +161,7 @@ export default function EquipmentForm({
     if (!formData.equipmentType.trim())  e.equipmentType = "Equipment type is required"
 
     if (!formData.serialNumber.trim())   e.serialNumber = "Serial number is required"
-    else if (isSerialNumberDuplicate(formData.serialNumber, existingEquipment, equipment?.id))
+    else if (isSerialNumberDuplicate(formData.serialNumber, existingEquipment ?? [], equipment?.id))
       e.serialNumber = "Serial number already exists"
 
     if (!formData.dateImported.trim())             e.dateImported = "Import date is required"
@@ -205,7 +207,7 @@ export default function EquipmentForm({
     // Edit mode
     if (equipment) {
       if (!validateSingle()) return
-      onSubmit([{ ...equipment, ...formData, status: formData.status }])
+      onSubmit([{ ...equipment, ...formData }])
       return
     }
 
@@ -218,7 +220,7 @@ export default function EquipmentForm({
 
     if (step === 2 && addType === "single") {
       if (!validateCommon() || !formData.serialNumber) return
-      if (isSerialNumberDuplicate(formData.serialNumber, existingEquipment)) {
+      if (isSerialNumberDuplicate(formData.serialNumber, existingEquipment ?? [])) {
         setErrors((e) => ({ ...e, serialNumber: "Serial number already exists" }))
         return
       }
@@ -252,7 +254,9 @@ export default function EquipmentForm({
               <Label htmlFor="model">Model <span className="text-red-500">*</span></Label>
               <Input id="model" name="model" value={formData.model} onChange={handleChange}
                      placeholder="e.g. Dell Elite8" className={inputCls} />
-              {errors.model && <p className="text-sm text-red-500">{errors.model}</p>}
+              <div className="h-5">
+                {errors.model && <p className="text-sm text-red-500">{errors.model}</p>}
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -268,7 +272,9 @@ export default function EquipmentForm({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.equipmentType && <p className="text-sm text-red-500">{errors.equipmentType}</p>}
+              <div className="h-5">
+                {errors.equipmentType && <p className="text-sm text-red-500">{errors.equipmentType}</p>}
+              </div>
             </div>
           </div>
 
@@ -279,14 +285,18 @@ export default function EquipmentForm({
               <Input id="serialNumber" name="serialNumber" value={formData.serialNumber}
                      onChange={handleChange} placeholder="Unique identifier"
                      className={`${inputCls} font-mono`} />
-              {errors.serialNumber && <p className="text-sm text-red-500">{errors.serialNumber}</p>}
+              <div className="h-5">
+                {errors.serialNumber && <p className="text-sm text-red-500">{errors.serialNumber}</p>}
+              </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="dateImported">Date Imported <span className="text-red-500">*</span></Label>
               <Input id="dateImported" name="dateImported" value={formData.dateImported}
                      onChange={handleChange} placeholder="MM/YYYY" className={inputCls} />
-              {errors.dateImported && <p className="text-sm text-red-500">{errors.dateImported}</p>}
+              <div className="h-5">
+                {errors.dateImported && <p className="text-sm text-red-500">{errors.dateImported}</p>}
+              </div>
             </div>
           </div>
 
@@ -331,8 +341,8 @@ export default function EquipmentForm({
               }`}
               onClick={() => setAddType("single")}
             >
-              <div className="p-4 space-x-2 flex items-start">
-                <div className="h-5 w-5 flex items-center justify-center rounded-full border border-primary">
+              <div className="p-4 flex items-start gap-3">
+                <div className="h-5 w-5 flex items-center justify-center rounded-full border border-primary flex-shrink-0 mt-0.5">
                   {addType === "single" && <div className="h-2.5 w-2.5 rounded-full bg-usf-green" />}
                 </div>
                 <div>
@@ -351,8 +361,8 @@ export default function EquipmentForm({
               }`}
               onClick={() => setAddType("multiple")}
             >
-              <div className="p-4 space-x-2 flex items-start">
-                <div className="h-5 w-5 flex items-center justify-center rounded-full border border-primary">
+              <div className="p-4 flex items-start gap-3">
+                <div className="h-5 w-5 flex items-center justify-center rounded-full border border-primary flex-shrink-0 mt-0.5">
                   {addType === "multiple" && <div className="h-2.5 w-2.5 rounded-full bg-usf-green" />}
                 </div>
                 <div>
@@ -378,7 +388,9 @@ export default function EquipmentForm({
               <Label htmlFor="model">Model <span className="text-red-500">*</span></Label>
               <Input id="model" name="model" value={commonData.model} onChange={handleCommonChange}
                      placeholder="e.g. Dell Elite8" className={inputCls} />
-              {errors.model && <p className="text-sm text-red-500">{errors.model}</p>}
+              <div className="h-5">
+                {errors.model && <p className="text-sm text-red-500">{errors.model}</p>}
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -394,7 +406,9 @@ export default function EquipmentForm({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.equipmentType && <p className="text-sm text-red-500">{errors.equipmentType}</p>}
+              <div className="h-5">
+                {errors.equipmentType && <p className="text-sm text-red-500">{errors.equipmentType}</p>}
+              </div>
             </div>
           </div>
 
@@ -404,7 +418,9 @@ export default function EquipmentForm({
               <Label htmlFor="dateImported">Date Imported <span className="text-red-500">*</span></Label>
               <Input id="dateImported" name="dateImported" value={commonData.dateImported}
                      onChange={handleCommonChange} placeholder="MM/YYYY" className={inputCls} />
-              {errors.dateImported && <p className="text-sm text-red-500">{errors.dateImported}</p>}
+              <div className="h-5">
+                {errors.dateImported && <p className="text-sm text-red-500">{errors.dateImported}</p>}
+              </div>
             </div>
 
             {addType === "single" ? (
@@ -413,7 +429,9 @@ export default function EquipmentForm({
                 <Input id="serialNumber" name="serialNumber" value={formData.serialNumber}
                        onChange={handleChange} placeholder="Unique identifier"
                        className={`${inputCls} font-mono`} />
-                {errors.serialNumber && <p className="text-sm text-red-500">{errors.serialNumber}</p>}
+                <div className="h-5">
+                  {errors.serialNumber && <p className="text-sm text-red-500">{errors.serialNumber}</p>}
+                </div>
               </div>
             ) : (
               <div className="grid gap-2">
@@ -421,11 +439,13 @@ export default function EquipmentForm({
                 <Input id="quantity" type="text" inputMode="numeric"
                        value={quantity.toString()} onChange={handleQtyChange}
                        placeholder="Enter quantity" className={inputCls} />
-                {errors.quantity && (
-                  <p className="flex items-center text-red-500 text-sm">
-                    <AlertCircle className="h-4 w-4 mr-1" /> {errors.quantity}
-                  </p>
-                )}
+                <div className="h-5">
+                  {errors.quantity && (
+                    <p className="flex items-center text-red-500 text-sm">
+                      <AlertCircle className="h-4 w-4 mr-1" /> {errors.quantity}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

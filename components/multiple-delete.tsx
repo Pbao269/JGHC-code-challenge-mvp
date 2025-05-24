@@ -15,21 +15,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Trash2, AlertCircle } from "lucide-react"
 import type { Equipment, DeleteReason } from "@/lib/types"
-import { getRoomById } from "@/lib/rooms"
 
 interface MultipleDeleteProps {
   selectedItems: string[]
   onDelete: (ids: string[], deleteReason: string, deleteNote?: string) => void
   disabled?: boolean
   equipment?: Equipment[]
-  onCancel?: () => void
 }
 
 export default function MultipleDelete({
   selectedItems,
   equipment = [],
   onDelete,
-  onCancel,
   disabled = false
 }: MultipleDeleteProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -40,8 +37,7 @@ export default function MultipleDelete({
   const selectedWarehouseItems = selectedItems.filter((id) => {
     const item = equipment.find((eq) => eq.id === id)
     if (!item) return false
-    const room = getRoomById(item.roomId)
-    return room?.buildingType === "warehouse"
+    return item.buildingType === "warehouse"
   })
 
   const handleDeleteConfirm = () => {

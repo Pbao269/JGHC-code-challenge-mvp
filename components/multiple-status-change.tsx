@@ -13,21 +13,18 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircle } from "lucide-react"
 import type { Equipment, EquipmentStatus } from "@/lib/types"
-import { getRoomById } from "@/lib/rooms"
 
 interface MultipleStatusChangeProps {
   selectedItems: string[]
   onStatusChange: (ids: string[], newStatus: EquipmentStatus) => void
   disabled?: boolean
   equipment?: Equipment[]
-  onCancel?: () => void
 }
 
 export default function MultipleStatusChange({
   selectedItems,
   equipment = [],
   onStatusChange,
-  onCancel,
   disabled = false
 }: MultipleStatusChangeProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -35,8 +32,7 @@ export default function MultipleStatusChange({
   const [availableStatuses, setAvailableStatuses] = useState<EquipmentStatus[]>([])
   const [currentStatus, setCurrentStatus] = useState<EquipmentStatus | null>(null)
 
-  // Get selected equipment details
-  const selectedEquipment = equipment.filter((item) => selectedItems.includes(item.id))
+
 
   // Check if all selected items have the same status and location type
   useEffect(() => {
@@ -49,9 +45,8 @@ export default function MultipleStatusChange({
         if (allSameStatus) {
           setCurrentStatus(firstItem.status)
 
-          // Determine available statuses based on location
-          const room = getRoomById(firstItem.roomId)
-          if (room?.buildingType === "warehouse") {
+          // Determine available statuses based on building type
+          if (firstItem.buildingType === "warehouse") {
             setAvailableStatuses(["stored", "maintenance", "replaced"])
           } else {
             setAvailableStatuses(["in-use", "need-replacement"])

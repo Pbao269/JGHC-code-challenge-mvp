@@ -5,9 +5,36 @@ import { v4 as uuidv4 } from "uuid"
 
 // helpers
 const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
-//
+
+// cache for room ids
+interface DbLocation {
+  id: string
+  room_name: string
+  building_type: BuildingType
+}
+
+interface DbEquipmentWithLocation {
+  id: string
+  model: string
+  equipment_type: string
+  serial_number: string
+  date_imported: string
+  status: EquipmentStatus
+  date_added: string
+  last_updated: string
+  delete_reason?: string | null
+  delete_note?: string | null
+  location_id: string
+  room_name: string
+  building_type: BuildingType
+}
+
+const roomIdCache: Record<string, DbLocation> = {}
+
+// get db location by local id
 const getDbLocationByLocalId = async (localId: string) => {
-  if (isUuid(localId)) return { id: localId } // already uuid
+  if (isUuid(localId)) return { id: localId }
+  if (roomIdCache[localId]) return roomIdCache[localId]
   const room = getRoomById(localId)
   if (!room) throw new Error(`Unknown room "${localId}"`)
   const { data, error } = await supabase
@@ -16,37 +43,38 @@ const getDbLocationByLocalId = async (localId: string) => {
     .eq("room_name", room.name)
     .single()
   if (error || !data) throw new Error(`DB location "${room.name}" not found`)
-  return data as { id: string; room_name: string; building_type: BuildingType }
+  roomIdCache[localId] = data as DbLocation
+  return data as DbLocation
 }
 
 // mappers DB→UI
-const mapDbEquipmentToClient = (item: Record<string, any>): Equipment => ({
-  id:            item.id,
-  model:         item.model,
-  equipmentType: item.equipment_type,
-  serialNumber:  item.serial_number,
-  dateImported:  item.date_imported,
-  status:        item.status as EquipmentStatus,
-  roomId:        item.location_id,
-  roomName:      item.room_name,
-  buildingType:  item.building_type,
-  dateAdded:     item.date_added,
-  lastUpdated:   item.last_updated,
-  deleteReason:  item.delete_reason ?? undefined,
-  deleteNote:    item.delete_note ?? undefined,
+const mapDbEquipmentToClient = (i: DbEquipmentWithLocation): Equipment => ({
+  id: i.id,
+  model: i.model,
+  equipmentType: i.equipment_type,
+  serialNumber: i.serial_number,
+  dateImported: i.date_imported,
+  status: i.status as EquipmentStatus,
+  roomId: i.location_id,
+  roomName: i.room_name,
+  buildingType: i.building_type,
+  dateAdded: i.date_added,
+  lastUpdated: i.last_updated,
+  deleteReason: i.delete_reason ?? undefined,
+  deleteNote: i.delete_note ?? undefined,
 })
-//
-const mapClientEquipmentToDb = (item: Equipment) => ({
-  id:             item.id,
-  model:          item.model,
-  equipment_type: item.equipmentType,
-  serial_number:  item.serialNumber,
-  date_imported:  item.dateImported,
-  status:         item.status,
-  date_added:     item.dateAdded,
-  last_updated:   item.lastUpdated,
-  delete_reason:  item.deleteReason ?? null,
-  delete_note:    item.deleteNote ?? null,
+
+const mapClientEquipmentToDb = (e: Equipment) => ({
+  id: e.id,
+  model: e.model,
+  equipment_type: e.equipmentType,
+  serial_number: e.serialNumber,
+  date_imported: e.dateImported,
+  status: e.status,
+  date_added: e.dateAdded,
+  last_updated: e.lastUpdated,
+  delete_reason: e.deleteReason ?? null,
+  delete_note: e.deleteNote ?? null,
 })
 
 // fetch all
@@ -61,70 +89,34 @@ export async function getAllEquipment(): Promise<Equipment[]> {
 
 // add rows
 export async function addEquipment(
-  newEquipment: Omit<
+  items: Omit<
     Equipment,
     "id" | "status" | "dateAdded" | "lastUpdated" | "roomId" | "buildingType" | "roomName"
   >[],
 ): Promise<Equipment[]> {
   const warehouseLocal = allRooms.find((r) => r.buildingType === "warehouse")
   if (!warehouseLocal) throw new Error("Missing warehouse in local data")
-  const { data: existing } = await supabase
-    .from("locations")
-    .select("*")
-    .eq("building_type", "warehouse")
-    .limit(1)
-  let warehouseLocation: { id: string; room_name: string; building_type: BuildingType }
-  if (existing && existing.length) {
-    warehouseLocation = {
-      id: existing[0].id,
-      room_name: existing[0].room_name,
-      building_type: existing[0].building_type as BuildingType,
-    }
-  } else {
-    const { data: created, error } = await supabase
-      .from("locations")
-      .insert({
-        room_name: warehouseLocal.name,
-        building_type: warehouseLocal.buildingType,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
-    if (error || !created) throw new Error(error?.message ?? "Failed to create warehouse")
-    warehouseLocation = {
-      id: created.id,
-      room_name: created.room_name,
-      building_type: created.building_type as BuildingType,
-    }
-  }
-  const now = new Date().toISOString()
-  const rows = newEquipment.map((e) => ({
+
+  const warehouseDb = await getDbLocationByLocalId(warehouseLocal.id)
+  const nowIso = new Date().toISOString()
+
+  const payload = items.map((e) => ({
     id: uuidv4(),
     model: e.model,
     equipment_type: e.equipmentType,
     serial_number: e.serialNumber,
     date_imported: e.dateImported,
     status: "stored",
-    date_added: now,
-    last_updated: now,
+    date_added: nowIso,
+    last_updated: nowIso,
+    location_id: warehouseDb.id,
   }))
-  const { data: inserted, error: eqErr } = await supabase.from("equipment").insert(rows).select()
-  if (eqErr || !inserted) throw new Error(eqErr?.message ?? "Insert failed")
-  const locRows = inserted.map((i) => ({
-    equipment_id: i.id,
-    location_id: warehouseLocation.id,
-    updated_at: now,
-  }))
-  const { error: locErr } = await supabase.from("equipment_location").insert(locRows)
-  if (locErr) throw new Error(locErr.message)
-  return inserted.map((i) =>
-    mapDbEquipmentToClient({
-      ...i,
-      location_id: warehouseLocation.id,
-      room_name: warehouseLocation.room_name,
-      building_type: warehouseLocation.building_type,
-    }),
-  )
+
+  const { data, error } = await supabase.rpc("add_equipment_with_location", {
+    items: payload,
+  })
+  if (error || !data) throw new Error(error?.message ?? "RPC add failed")
+  return (data as DbEquipmentWithLocation[]).map(mapDbEquipmentToClient)
 }
 
 // update
@@ -140,55 +132,55 @@ export async function updateEquipment(updated: Equipment): Promise<Equipment | n
     console.error("Update equipment error:", error?.message)
     return null
   }
-  const { data: loc } = await supabase
-    .from("equipment_location")
-    .select("location_id")
-    .eq("equipment_id", updated.id)
-    .single()
-  const { data: room } = loc
-    ? await supabase.from("locations").select("*").eq("id", loc.location_id).single()
-    : { data: null }
-  return mapDbEquipmentToClient({ ...data, location_id: room?.id, room_name: room?.room_name, building_type: room?.building_type })
+  const loc =
+    updated.roomId && isUuid(updated.roomId)
+      ? { id: updated.roomId }
+      : await getDbLocationByLocalId(updated.roomId)
+  return mapDbEquipmentToClient({
+    ...data,
+    location_id: loc.id,
+    room_name: updated.roomName,
+    building_type: updated.buildingType,
+  })
 }
 
 // delete
-export async function deleteEquipment(id: string, deleteReason: string, deleteNote?: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("equipment")
-    .update({ delete_reason: deleteReason, delete_note: deleteNote ?? null, last_updated: new Date().toISOString() })
-    .eq("id", id)
+export async function deleteEquipment(id: string, reason: string, note?: string): Promise<boolean> {
+  const { error } = await supabase.rpc("delete_equipment_soft", {
+    p_id: id,
+    p_reason: reason,
+    p_note: note ?? null,
+  })
   if (error) {
-    console.error("Delete equipment error:", error.message)
-    return false
-  }
-  const { error: delErr } = await supabase.from("equipment").delete().eq("id", id)
-  if (delErr) {
-    console.error("Delete equipment row error:", delErr.message)
+    console.error("Delete RPC error:", error.message)
     return false
   }
   return true
 }
 
 // bulk delete
-export async function deleteMultipleEquipment(ids: string[], deleteReason: string, deleteNote?: string): Promise<boolean> {
-  const { error: updErr } = await supabase
-    .from("equipment")
-    .update({ delete_reason: deleteReason, delete_note: deleteNote ?? null, last_updated: new Date().toISOString() })
-    .in("id", ids)
-  if (updErr) {
-    console.error("Bulk update error:", updErr.message)
-    return false
-  }
-  const { error: delErr } = await supabase.from("equipment").delete().in("id", ids)
-  if (delErr) {
-    console.error("Bulk delete error:", delErr.message)
+export async function deleteMultipleEquipment(
+  ids: string[],
+  reason: string,
+  note?: string,
+): Promise<boolean> {
+  const { error } = await supabase.rpc("delete_equipment_soft_bulk", {
+    p_ids: ids,
+    p_reason: reason,
+    p_note: note ?? null,
+  })
+  if (error) {
+    console.error("Bulk delete RPC error:", error.message)
     return false
   }
   return true
 }
 
 // bulk status
-export async function updateMultipleStatus(ids: string[], newStatus: EquipmentStatus): Promise<boolean> {
+export async function updateMultipleStatus(
+  ids: string[],
+  newStatus: EquipmentStatus,
+): Promise<boolean> {
   const { error } = await supabase
     .from("equipment")
     .update({ status: newStatus, last_updated: new Date().toISOString() })
@@ -208,21 +200,13 @@ export async function transferEquipment(
   prevStatus: EquipmentStatus,
   newStatus: EquipmentStatus,
 ): Promise<boolean> {
-  const to = await getDbLocationByLocalId(toLocalRoomId) //
-  const from = await getDbLocationByLocalId(fromLocalRoomId) //
-  const { error } = await supabase.rpc("transfer_equipment", {
-    p_equipment_id: id,
-    p_to_location_id: to.id,
-    p_from_location_id: from.id,
-    p_previous_status: prevStatus,
-    p_new_status: newStatus,
-    p_timestamp: new Date().toISOString(),
-  })
-  if (error) {
-    console.error("Transfer RPC error:", error.message)
-    return false
-  }
-  return true
+  const res = await transferMultipleEquipment(
+    [
+      { id, previousRoomId: fromLocalRoomId, previousStatus: prevStatus, newStatus },
+    ],
+    toLocalRoomId,
+  )
+  return res
 }
 
 // transfer bulk
@@ -230,11 +214,29 @@ export async function transferMultipleEquipment(
   items: { id: string; previousRoomId: string; previousStatus: EquipmentStatus; newStatus: EquipmentStatus }[],
   toLocalRoomId: string,
 ): Promise<boolean> {
-  const to = await getDbLocationByLocalId(toLocalRoomId) //
-  for (const itm of items) {
-    const from = await getDbLocationByLocalId(itm.previousRoomId) //
-    const ok = await transferEquipment(itm.id, to.id, from.id, itm.previousStatus, itm.newStatus)
-    if (!ok) return false
+  const to = await getDbLocationByLocalId(toLocalRoomId)
+  const ts = new Date().toISOString()
+
+  const transfers = await Promise.all(
+    items.map(async (it) => {
+      const from = await getDbLocationByLocalId(it.previousRoomId)
+      return {
+        equipment_id: it.id,
+        from_location_id: from.id,
+        to_location_id: to.id,
+        previous_status: it.previousStatus,
+        new_status: it.newStatus,
+        ts,
+      }
+    }),
+  )
+
+  const { error } = await supabase.rpc("transfer_equipment_batch", {
+    transfers,
+  })
+  if (error) {
+    console.error("Transfer batch RPC error:", error.message)
+    return false
   }
   return true
 }
