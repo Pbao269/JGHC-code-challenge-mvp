@@ -20,7 +20,7 @@
 - **State Management**: React Hooks + Local State: localStorage
 - **Deployment**: Vercel
 
-## 📋 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 - Node.js (v18+)
@@ -65,7 +65,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 🏗 Project Structure
+## Project Structure
 
 ```
 ├── app/                          # Next.js app directory
@@ -94,7 +94,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 └── supabase-cronDelete.sql       # Automated cleanup with pg_cron
 ```
 
-## 🗄 Database Schema
+## Database Schema
 
 ### Core Tables
 - **`equipment`** - Equipment details
