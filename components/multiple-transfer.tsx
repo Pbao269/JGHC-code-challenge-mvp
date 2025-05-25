@@ -223,15 +223,15 @@ export default function MultipleTransfer({
                     <p className="font-medium">Status will change when transferred:</p>
                     {/* From warehouse to classroom/office */}
                     {currentLocationType === "warehouse" && selectedBuildingType !== "warehouse" && (
-                      <p>Items will change to "In Use" status</p>
+                      <p>Items will change to &ldquo;In Use&rdquo; status</p>
                     )}
 
                     {/* From classroom/office to warehouse */}
                     {currentLocationType !== "warehouse" && selectedBuildingType === "warehouse" && (
                       <p>
-                        "In Use" items will change to "Stored"
+                        &ldquo;In Use&rdquo; items will change to &ldquo;Stored&rdquo;
                         <br />
-                        "Need Replacement" items will change to "Replaced"
+                        &ldquo;Need Replacement&rdquo; items will change to &ldquo;Replaced&rdquo;
                       </p>
                     )}
                   </div>
