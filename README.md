@@ -18,7 +18,7 @@
   - RESTful API via Supabase Client
   - PostgreSQL database with views, functions, and RPC calls
 - **State Management**: React Hooks + Local State: localStorage
-- **Deployment**: Vercel
+- **Deployment**: Vercel [https://jghc-code-challenge-mvp.vercel.app/](https://jghc-code-challenge-mvp.vercel.app/)
 
 ## Setup Instructions
 
