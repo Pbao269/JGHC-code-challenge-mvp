@@ -107,22 +107,6 @@ export async function getDeletedEquipment(): Promise<Equipment[]> {
   return data.map(mapDbEquipmentToClient)
 }
 
-// permanently delete equipment older than specified days
-export async function permanentlyDeleteOldEquipment(daysOld: number = 3): Promise<{ deletedCount: number; error?: string }> {
-  const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - daysOld)
-  
-  const { data, error } = await supabase.rpc("permanently_delete_old_equipment", {
-    cutoff_date: cutoffDate.toISOString()
-  })
-  
-  if (error) {
-    console.error("Error permanently deleting old equipment:", error.message)
-    return { deletedCount: 0, error: error.message }
-  }
-  
-  return { deletedCount: data || 0 }
-}
 
 // add rows
 export async function addEquipment(
@@ -223,6 +207,32 @@ export async function deleteMultipleEquipment(
   }
   return true
 }
+
+// hard delete all soft-deleted equipment (regardless of age)
+export async function hardDeleteAllSoftDeleted(): Promise<{ deletedCount: number; error?: string }> {
+  const { data: countData, error: countError } = await supabase
+    .from("equipment")
+    .select("id", { count: "exact" })
+    .not("delete_reason", "is", null)
+  
+  if (countError) {
+    console.error("Error counting soft-deleted equipment:", countError.message)
+    return { deletedCount: 0, error: countError.message }
+  }
+  
+  const itemCount = countData?.length || 0
+  
+  // Call the hard delete function
+  const { error } = await supabase.rpc("hard_delete_soft_deleted_weekly")
+  
+  if (error) {
+    console.error("Error hard deleting soft-deleted equipment:", error.message)
+    return { deletedCount: 0, error: error.message }
+  }
+  
+  return { deletedCount: itemCount }
+}
+
 
 // bulk status
 export async function updateMultipleStatus(

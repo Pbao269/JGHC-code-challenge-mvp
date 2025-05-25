@@ -59,7 +59,7 @@ begin
   for t in
     select * from jsonb_array_elements(transfers) as elem
   loop
-    -- 1) Update the equipment's status
+    -- 1) Update the equipment’s status
     update equipment
        set status       = (t->>'new_status')::equipment_status,
            last_updated = (t->>'ts')::timestamptz
@@ -120,4 +120,3 @@ language sql security definer as $$
          last_updated  = now()
    where id = any(p_ids);
 $$;
-

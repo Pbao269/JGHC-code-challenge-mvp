@@ -1,7 +1,7 @@
 -- pg_cron installation
 create extension if not exists pg_cron   with schema extensions;
 
--- hard-delete primitive  
+-- hard-delete   
 create or replace function hard_delete_equipment(p_ids uuid[])
 returns void
 language plpgsql security definer
@@ -24,7 +24,7 @@ as $$
 declare
   victim_ids uuid[];
 begin
-  select array_agg(id)    -- may be NULL if nothing to purge
+  select array_agg(id)    
     into victim_ids
     from equipment
    where delete_reason is not null;
@@ -36,8 +36,7 @@ end $$;
 
 -- pg_cron delete – 23:59 Eastern Time every Sunday
 select cron.schedule(
-         'weekly_equipment_hard_delete',           -- job name
-         'America/New_York',                       -- ET incl. DST
-         '59 23 * * 0',                            -- 23:59 every Sun
-         $$call hard_delete_soft_deleted_weekly();$$
-       );
+  'weekly_equipment_hard_delete',   
+  '59 23 * * 0',                    
+  $$call hard_delete_soft_deleted_weekly();$$
+);
