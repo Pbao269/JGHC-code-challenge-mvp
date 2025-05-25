@@ -87,10 +87,12 @@ export default function EquipmentForm({
     serialNumbers: [] as string[],
   })
 
-  // Reset serial when switching add-type
+  // Reset serial when switching add-type (only in add mode, not edit mode)
   useEffect(() => {
-    if (addType === "single") setFormData((p) => ({ ...p, serialNumber: "" }))
-  }, [addType])
+    if (!equipment && addType === "single") {
+      setFormData((p) => ({ ...p, serialNumber: "" }))
+    }
+  }, [addType, equipment])
 
   // Status list based on location
   const isWarehouse = equipment
@@ -266,7 +268,7 @@ export default function EquipmentForm({
                 <SelectTrigger id="equipmentType" className={inputCls}>
                   <SelectValue placeholder="Select equipment type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {equipmentTypes.map((t) => (
                     <SelectItem key={t} value={t.toLowerCase()}>{t}</SelectItem>
                   ))}
@@ -400,7 +402,7 @@ export default function EquipmentForm({
                 <SelectTrigger id="equipmentType" className={inputCls}>
                   <SelectValue placeholder="Select equipment type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {equipmentTypes.map((t) => (
                     <SelectItem key={t} value={t.toLowerCase()}>{t}</SelectItem>
                   ))}

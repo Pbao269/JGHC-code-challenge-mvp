@@ -48,6 +48,41 @@ export default function InventoryDashboard() {
   // State for deleted items view
   const [showDeletedItems, setShowDeletedItems] = useState(false)
 
+  // Function to refresh equipment data
+  const refreshEquipment = async () => {
+    try {
+      const data = await getAllEquipment()
+      setEquipment(data)
+    } catch (err) {
+      console.error("Error refreshing equipment:", err)
+    }
+  }
+
+  // Load saved filter states from localStorage after hydration
+  useEffect(() => {
+    // Only run on client side after hydration
+    const savedActiveTab = localStorage.getItem('inventory-active-tab') as BuildingType | "all" | null
+    const savedStatusFilter = localStorage.getItem('inventory-status-filter') as EquipmentStatus | "all" | null
+    const savedSearchQuery = localStorage.getItem('inventory-search-query')
+
+    if (savedActiveTab) setActiveTab(savedActiveTab)
+    if (savedStatusFilter) setStatusFilter(savedStatusFilter)
+    if (savedSearchQuery) setSearchQuery(savedSearchQuery)
+  }, [])
+
+  // Save filter states to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('inventory-active-tab', activeTab)
+  }, [activeTab])
+
+  useEffect(() => {
+    localStorage.setItem('inventory-status-filter', statusFilter)
+  }, [statusFilter])
+
+  useEffect(() => {
+    localStorage.setItem('inventory-search-query', searchQuery)
+  }, [searchQuery])
+
   // Initialize database and fetch data on component mount
   useEffect(() => {
     async function initialize() {
@@ -133,8 +168,8 @@ export default function InventoryDashboard() {
       const addedEquipment = await addEquipmentApi(newEquipment)
       
       if (addedEquipment.length > 0) {
-        setEquipment([...equipment, ...addedEquipment])
         setIsAddingEquipment(false)
+        await refreshEquipment() // Refresh to get latest data with proper sorting
       } else {
         setError("No equipment was added. Please check the form and try again.")
       }
@@ -175,17 +210,9 @@ export default function InventoryDashboard() {
       const result = await updateEquipmentApi(completeEquipment)
       
       if (result) {
-        setEquipment(
-          equipment.map((item) => {
-            if (item.id === editingEquipment.id) {
-              return result
-            }
-            return item
-          }),
-        )
+        setEditingEquipment(null)
+        await refreshEquipment() // Refresh to get latest data with proper sorting
       }
-      
-      setEditingEquipment(null)
     } catch (err) {
       console.error("Error updating equipment:", err)
       setError("Failed to update equipment. Please try again.")
@@ -201,7 +228,7 @@ export default function InventoryDashboard() {
       const success = await deleteEquipmentApi(id, deleteReason, deleteNote)
       
       if (success) {
-        setEquipment(equipment.filter((item) => item.id !== id))
+        await refreshEquipment() // Refresh to get latest data
       } else {
         setError("Failed to delete equipment. Please try again.")
       }
@@ -220,10 +247,10 @@ export default function InventoryDashboard() {
       const success = await deleteMultipleEquipmentApi(ids, deleteReason, deleteNote)
       
       if (success) {
-        setEquipment(equipment.filter((item) => !ids.includes(item.id)))
         setIsMultipleSelect(false)
         setSelectedItems([])
         setMultipleAction(null)
+        await refreshEquipment() // Refresh to get latest data
       } else {
         setError("Failed to delete equipment. Please try again.")
       }
@@ -277,18 +304,7 @@ export default function InventoryDashboard() {
       )
       
       if (success) {
-        setEquipment(
-          equipment.map((item) => {
-            if (item.id !== id) return item
-            
-            return {
-              ...item,
-              roomId,
-              status: newStatus,
-              lastUpdated: new Date().toISOString(),
-            }
-          }),
-        )
+        await refreshEquipment() // Refresh to get latest data with proper sorting
       } else {
         setError("Failed to transfer equipment. Please try again.")
       }
@@ -348,25 +364,10 @@ export default function InventoryDashboard() {
       const success = await transferMultipleEquipmentApi(equipmentWithDetails, roomId)
       
       if (success) {
-        setEquipment(
-          equipment.map((item) => {
-            if (!ids.includes(item.id)) return item
-            
-            const transferDetails = equipmentWithDetails.find(e => e.id === item.id)
-            if (!transferDetails) return item
-            
-            return {
-              ...item,
-              roomId,
-              status: transferDetails.newStatus,
-              lastUpdated: new Date().toISOString(),
-            }
-          }),
-        )
-        
         setIsMultipleSelect(false)
         setSelectedItems([])
         setMultipleAction(null)
+        await refreshEquipment() // Refresh to get latest data with proper sorting
       } else {
         setError("Failed to transfer equipment. Please try again.")
       }
@@ -390,21 +391,10 @@ export default function InventoryDashboard() {
       const success = await updateMultipleStatusApi(ids, newStatus)
       
       if (success) {
-        setEquipment(
-          equipment.map((item) => {
-            if (!ids.includes(item.id)) return item
-            
-            return {
-              ...item,
-              status: newStatus,
-              lastUpdated: new Date().toISOString(),
-            }
-          }),
-        )
-        
         setIsMultipleSelect(false)
         setSelectedItems([])
         setMultipleAction(null)
+        await refreshEquipment() // Refresh to get latest data with proper sorting
       } else {
         setError("Failed to update equipment status. Please try again.")
       }

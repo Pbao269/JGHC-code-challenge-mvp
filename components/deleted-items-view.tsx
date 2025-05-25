@@ -6,18 +6,18 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, Trash2, Clock, FileText } from "lucide-react"
+import { AlertTriangle, Trash2, Clock, FileText, Download, RefreshCw } from "lucide-react"
 import type { Equipment } from "@/lib/types"
 import { getDeletedEquipment, permanentlyDeleteOldEquipment } from "@/lib/api"
 import { getEquipmentTypeIcon, getTimeAgo } from "@/lib/utils"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 interface DeletedItemsViewProps {
   isOpen: boolean
@@ -85,14 +85,89 @@ export default function DeletedItemsView({ isOpen, onClose }: DeletedItemsViewPr
     }
   }
 
+  // PDF Export function
+  const exportToPDF = () => {
+    const doc = new jsPDF()
+    
+    // Add title and header
+    doc.setFontSize(20)
+    doc.text("USF Inventory - Deleted Items Report", 20, 25)
+    
+    doc.setFontSize(12)
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 35)
+    doc.text(`Total Deleted Items: ${deletedItems.length}`, 20, 45)
+    doc.text(`Items Eligible for Cleanup: ${eligibleForCleanup}`, 20, 55)
+    
+    // Add cleanup policy information
+    doc.setFontSize(10)
+    doc.text("Note: Deleted items are automatically removed after 3 days", 20, 65)
+    
+    // Prepare table data
+    const tableData = deletedItems.map((item) => {
+      const timeUntilDeletion = calculateTimeUntilDeletion(item.lastUpdated)
+      
+      return [
+        item.model,
+        item.equipmentType,
+        item.serialNumber,
+        item.deleteReason?.replace("-", " ") || "N/A",
+        item.deleteNote || "—",
+        new Date(item.lastUpdated).toLocaleDateString(),
+        timeUntilDeletion
+      ]
+    })
+    
+    // Add table
+    autoTable(doc, {
+      head: [['Model', 'Type', 'Serial Number', 'Delete Reason', 'Note', 'Deleted Date', 'Cleanup Status']],
+      body: tableData,
+      startY: 75,
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [46, 125, 50], // USF Green
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      columnStyles: {
+        0: { cellWidth: 25 }, // Model
+        1: { cellWidth: 20 }, // Type
+        2: { cellWidth: 25 }, // Serial Number
+        3: { cellWidth: 20 }, // Delete Reason
+        4: { cellWidth: 30 }, // Note
+        5: { cellWidth: 25 }, // Deleted Date
+        6: { cellWidth: 30 }, // Cleanup Status
+      },
+      margin: { left: 20, right: 20 },
+    })
+    
+    // Add footer
+    const pageCount = doc.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.text(
+        `Page ${i} of ${pageCount} - USF Inventory Management System`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      )
+    }
+    
+    // Save the PDF
+    const fileName = `deleted-items-report-${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
+  }
+
   // Fetch data when dialog opens
   useEffect(() => {
     if (isOpen) {
       fetchDeletedItems()
-      
-      // Set up auto-refresh every 30 seconds when dialog is open
-      const interval = setInterval(fetchDeletedItems, 30000)
-      return () => clearInterval(interval)
     }
   }, [isOpen])
 
@@ -105,172 +180,243 @@ export default function DeletedItemsView({ isOpen, onClose }: DeletedItemsViewPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-red-600" />
-            Deleted Items
-          </DialogTitle>
-          <DialogDescription>
-            View and manage soft-deleted equipment items. Items are automatically removed after 3 days.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[95vw] max-w-7xl h-[90vh] max-h-[900px] overflow-hidden flex flex-col p-0">
+        {/* Header Section - Fixed */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-white">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              <span>Deleted Items Management</span>
+            </DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
+              View and manage soft-deleted equipment items. Items are automatically removed after 3 days.
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Warning banner */}
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">
-                Automatic Cleanup Policy
-              </p>
-              <p className="text-sm text-amber-700 mt-1">
-                Deleted items are permanently removed from the database after 3 days. 
-                This action cannot be undone. Currently, <strong>{eligibleForCleanup}</strong> items 
-                are eligible for permanent deletion.
-              </p>
+          {/* Action Bar - Responsive */}
+          <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            {/* Left side - Stats summary */}
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-lg">{deletedItems.length}</span>
+                <span className="text-muted-foreground">Total Deleted</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-orange-600" />
+                <span className="font-medium text-lg">{eligibleForCleanup}</span>
+                <span className="text-muted-foreground">Pending Cleanup</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-orange-600" />
-                Pending Cleanup
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-orange-600">{eligibleForCleanup}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <FileText className="mr-2 h-4 w-4 text-blue-600" />
-                Total Deleted
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-blue-600">{deletedItems.length}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Cleanup stats */}
-        {cleanupStats && (
-          <div className={`p-4 rounded-md mb-4 ${cleanupStats.error ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
-            <p className={`text-sm font-medium ${cleanupStats.error ? 'text-red-800' : 'text-green-800'}`}>
-              {cleanupStats.error 
-                ? `Cleanup failed: ${cleanupStats.error}`
-                : `Cleanup completed: ${cleanupStats.deletedCount} items permanently deleted`
-              }
-            </p>
-          </div>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="flex-1 overflow-auto border rounded-md">
-          {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600"></div>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipment</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Serial Number</TableHead>
-                  <TableHead>Delete Reason</TableHead>
-                  <TableHead>Delete Note</TableHead>
-                  <TableHead>Deleted Date</TableHead>
-                  <TableHead>Cleanup Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deletedItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2">
-                        <Trash2 className="h-8 w-8 text-muted-foreground/50" />
-                        <p>No deleted items found</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  deletedItems.map((item) => {
-                    const timeUntilDeletion = calculateTimeUntilDeletion(item.lastUpdated)
-                    const isEligible = timeUntilDeletion === "Eligible for cleanup"
-                    
-                    return (
-                      <TableRow key={item.id} className={isEligible ? "bg-red-50" : ""}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{getEquipmentTypeIcon(item.equipmentType)}</span>
-                            {item.model}
-                          </div>
-                        </TableCell>
-                        <TableCell className="capitalize">{item.equipmentType}</TableCell>
-                        <TableCell className="font-mono text-sm">{item.serialNumber}</TableCell>
-                        <TableCell>
-                          <span className="capitalize px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800">
-                            {item.deleteReason?.replace("-", " ")}
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate" title={item.deleteNote || ""}>
-                          {item.deleteNote || "—"}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {getTimeAgo(item.lastUpdated)}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                            isEligible 
-                              ? "bg-red-100 text-red-800" 
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}>
-                            {timeUntilDeletion}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-
-        <DialogFooter className="flex-shrink-0 pt-4">
-          <div className="flex items-center justify-between w-full">
-            <Button 
-              variant="outline" 
-              onClick={runCleanup}
-              disabled={isLoading || eligibleForCleanup === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Run Cleanup Now ({eligibleForCleanup} items)
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={fetchDeletedItems} disabled={isLoading}>
-                Refresh
+            {/* Right side - Action buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchDeletedItems} 
+                disabled={isLoading}
+                className="flex-1 sm:flex-none"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">Sync</span>
               </Button>
-              <Button onClick={onClose}>Close</Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={exportToPDF}
+                disabled={isLoading || deletedItems.length === 0}
+                className="flex-1 sm:flex-none"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </Button>
+              
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={runCleanup}
+                disabled={isLoading || eligibleForCleanup === 0}
+                className="flex-1 sm:flex-none"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Cleanup ({eligibleForCleanup})</span>
+                <span className="sm:hidden">Clean</span>
+              </Button>
             </div>
           </div>
-        </DialogFooter>
+        </div>
+
+        {/* Content Section - Scrollable */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
+          {/* Warning Banner */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-800 mb-1">
+                  Automatic Cleanup Policy
+                </p>
+                <p className="text-sm text-amber-700">
+                  Deleted items are permanently removed after 3 days. This action cannot be undone.
+                  <span className="block sm:inline sm:ml-1">
+                    Currently <strong>{eligibleForCleanup}</strong> items are eligible for deletion.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cleanup Stats Alert */}
+          {cleanupStats && (
+            <div className={`p-4 rounded-lg border ${
+              cleanupStats.error 
+                ? 'bg-red-50 border-red-200' 
+                : 'bg-green-50 border-green-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {cleanupStats.error ? (
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                ) : (
+                  <Trash2 className="h-4 w-4 text-green-600" />
+                )}
+                <p className={`text-sm font-medium ${
+                  cleanupStats.error ? 'text-red-800' : 'text-green-800'
+                }`}>
+                  {cleanupStats.error 
+                    ? `Cleanup failed: ${cleanupStats.error}`
+                    : `Cleanup completed successfully: ${cleanupStats.deletedCount} items permanently deleted`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Alert */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Data Table - Optimized for larger screens */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            {isLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <div className="text-center space-y-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600 mx-auto"></div>
+                  <p className="text-sm text-muted-foreground">Loading deleted items...</p>
+                </div>
+              </div>
+            ) : deletedItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <Trash2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground mb-2">No deleted items</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  All equipment items are currently active. Deleted items will appear here and be automatically cleaned up after 3 days.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-semibold w-[200px]">Equipment</TableHead>
+                      <TableHead className="font-semibold w-[120px] hidden sm:table-cell">Type</TableHead>
+                      <TableHead className="font-semibold w-[140px]">Serial Number</TableHead>
+                      <TableHead className="font-semibold w-[120px] hidden md:table-cell">Delete Reason</TableHead>
+                      <TableHead className="font-semibold w-[200px] hidden lg:table-cell">Delete Note</TableHead>
+                      <TableHead className="font-semibold w-[140px] hidden md:table-cell">Deleted Date</TableHead>
+                      <TableHead className="font-semibold w-[160px]">Cleanup Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deletedItems.map((item) => {
+                      const timeUntilDeletion = calculateTimeUntilDeletion(item.lastUpdated)
+                      const isEligible = timeUntilDeletion === "Eligible for cleanup"
+                      
+                      return (
+                        <TableRow 
+                          key={item.id} 
+                          className={`hover:bg-gray-50 ${isEligible ? "bg-red-50 hover:bg-red-100" : ""}`}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-lg flex-shrink-0">{getEquipmentTypeIcon(item.equipmentType)}</span>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate text-base">{item.model}</p>
+                                <p className="text-xs text-muted-foreground sm:hidden capitalize">
+                                  {item.equipmentType}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="capitalize hidden sm:table-cell text-sm">
+                            {item.equipmentType}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            <span className="block" title={item.serialNumber}>
+                              {item.serialNumber}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              {item.deleteReason?.replace("-", " ")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <span className="block text-sm" title={item.deleteNote || ""}>
+                              {item.deleteNote || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm hidden md:table-cell">
+                            <div className="space-y-1">
+                              <span className="block font-medium" title={new Date(item.lastUpdated).toLocaleString()}>
+                                {getTimeAgo(item.lastUpdated)}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                {new Date(item.lastUpdated).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                              isEligible 
+                                ? "bg-red-100 text-red-800" 
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}>
+                              {timeUntilDeletion}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Section - Fixed */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-t bg-gray-50">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="text-xs text-muted-foreground">
+              <span className="block sm:inline">Manual refresh available via button</span>
+              <span className="hidden sm:inline sm:mx-2">•</span>
+              <span className="block sm:inline">Last updated: {new Date().toLocaleTimeString()}</span>
+            </div>
+            <Button onClick={onClose} className="w-full sm:w-auto">
+              Close
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

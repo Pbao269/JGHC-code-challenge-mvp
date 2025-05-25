@@ -78,7 +78,7 @@ export default function EquipmentTable({
   }
 
   const handleTransferConfirm = () => {
-    if (transferItem && selectedRoomId) {
+    if (transferItem && selectedRoomId && availableRooms.length > 0) {
       onTransfer(transferItem.id, selectedRoomId)
       resetTransferDialog()
     }
@@ -138,14 +138,29 @@ export default function EquipmentTable({
     }
   }
 
-  const filteredRooms =
-    selectedBuildingType === "warehouse"
-      ? allRooms.filter((r) => r.buildingType === "warehouse")
-      : roomSearchQuery
-          ? searchRoomsByPrefix(roomSearchQuery, selectedBuildingType as BuildingType)
-          : selectedBuildingType
-              ? allRooms.filter((r) => r.buildingType === selectedBuildingType)
-              : []
+  const filteredRooms = selectedBuildingType === "warehouse"
+    ? allRooms.filter((r) => r.buildingType === "warehouse")
+    : roomSearchQuery
+    ? searchRoomsByPrefix(roomSearchQuery, selectedBuildingType as BuildingType)
+    : selectedBuildingType
+    ? allRooms.filter((r) => r.buildingType === selectedBuildingType)
+    : []
+
+  // Filter out the current room to prevent transferring to the same location
+  const availableRooms = transferItem 
+    ? filteredRooms.filter(room => {
+        // Compare by room name and building type since transferItem.roomId is a database UUID
+        // while allRooms uses local IDs
+        const isCurrentRoom = room.name === transferItem.roomName && room.buildingType === transferItem.buildingType
+        if (isCurrentRoom) {
+          console.log(`Filtering out current room: ${room.name} (${room.buildingType})`)
+        }
+        return !isCurrentRoom
+      })
+    : filteredRooms
+
+  // Check if the selected building type is the same as current
+  const isSameBuildingType = transferItem && selectedBuildingType === transferItem.buildingType
 
   // render
   return (
@@ -292,7 +307,7 @@ export default function EquipmentTable({
             </DialogDescription>
           </DialogHeader>
 
-          <RadioGroup value={deleteReason} onValueChange={setDeleteReason} className="space-y-3 py-4">
+          <RadioGroup value={deleteReason} onValueChange={(value) => setDeleteReason(value as DeleteReason)} className="space-y-3 py-4">
             {(["broken", "obsolete", "other"] as DeleteReason[]).map((r) => (
               <div key={r} className="flex items-center space-x-2">
                 <RadioGroupItem value={r} id={r} />
@@ -353,61 +368,99 @@ export default function EquipmentTable({
                 <SelectValue placeholder="Select building type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="warehouse"><Boxes className="mr-2 h-4 w-4" />Warehouse</SelectItem>
-                <SelectItem value="classroom"><School className="mr-2 h-4 w-4" />Classroom</SelectItem>
-                <SelectItem value="office"><Building2 className="mr-2 h-4 w-4" />Office</SelectItem>
+                <SelectItem value="warehouse">
+                  <div className="flex items-center">
+                    <Boxes className="mr-2 h-4 w-4" />
+                    <span>Warehouse</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="classroom">
+                  <div className="flex items-center">
+                    <School className="mr-2 h-4 w-4" />
+                    <span>Classroom</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="office">
+                  <div className="flex items-center">
+                    <Building2 className="mr-2 h-4 w-4" />
+                    <span>Office</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* step 2: choose room (if not warehouse) */}
           {selectedBuildingType && selectedBuildingType !== "warehouse" && (
-            <div className="space-y-2 pt-4">
-              <h3 className="text-sm font-medium">2. Search room</h3>
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">2. Search for room</h3>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="e.g. HON 203"
+                  placeholder={`Search ${selectedBuildingType} rooms (e.g. HON 1)`}
                   className="pl-8"
                   value={roomSearchQuery}
                   onChange={(e) => setRoomSearchQuery(e.target.value)}
                 />
               </div>
 
-              {/* results */}
+              {/* room search results */}
               <div className="mt-2 border rounded-md max-h-[200px] overflow-y-auto">
-                {filteredRooms.length === 0 ? (
+                {availableRooms.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    {roomSearchQuery ? "No rooms found" : "Type to search for rooms"}
+                    {roomSearchQuery ? (
+                      isSameBuildingType 
+                        ? `No other rooms found - equipment is already in ${transferItem?.roomName}`
+                        : "No rooms found matching your search"
+                    ) : (
+                      isSameBuildingType 
+                        ? `No other rooms available - equipment is already in ${transferItem?.roomName}`
+                        : "Type to search for rooms"
+                    )}
                   </div>
                 ) : (
-                  filteredRooms.map((r) => (
-                    <div
-                      key={r.id}
-                      className={`p-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 ${
-                        selectedRoomId === r.id ? "bg-usf-green/10" : ""
-                      }`}
-                      onClick={() => setSelectedRoomId(r.id)}
-                    >
-                      <div className="flex items-center min-w-0">
-                        {btMeta(r.buildingType).icon}
-                        <span className="ml-2 truncate">{r.name}</span>
-                      </div>
-                      {selectedRoomId === r.id && <div className="h-2 w-2 rounded-full bg-usf-green" />}
-                    </div>
-                  ))
+                  <div className="divide-y">
+                    {availableRooms.map((room) => {
+                      const roomMeta = btMeta(room.buildingType)
+                      return (
+                        <div
+                          key={room.id}
+                          className={`p-3 cursor-pointer hover:bg-muted/50 flex items-center justify-between ${
+                            selectedRoomId === room.id ? "bg-usf-green/10" : ""
+                          }`}
+                          onClick={() => setSelectedRoomId(room.id)}
+                        >
+                          <div className="flex items-center">
+                            {roomMeta.icon}
+                            <span className="ml-2">{room.name}</span>
+                          </div>
+                          {selectedRoomId === room.id && (
+                            <div className="h-2 w-2 rounded-full bg-usf-green"></div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* warehouse auto-selected chip */}
           {selectedBuildingType === "warehouse" && (
             <div className="pt-4 space-y-2">
               <h3 className="text-sm font-medium">2. Selected location</h3>
-              <div className="p-3 border rounded-md bg-usf-green/5 flex items-center">
-                <Boxes className="mr-2 h-4 w-4 text-usf-green" /> HON Warehouse
-              </div>
+              {availableRooms.length === 0 ? (
+                <div className="p-3 border rounded-md bg-red-50 text-red-800 text-sm">
+                  <div className="flex items-center">
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    <span>Equipment is already in {transferItem?.roomName} - cannot transfer to same location</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 border rounded-md bg-usf-green/5 flex items-center">
+                  <Boxes className="mr-2 h-4 w-4 text-usf-green" /> HON Warehouse
+                </div>
+              )}
             </div>
           )}
 
@@ -440,7 +493,7 @@ export default function EquipmentTable({
             <Button variant="outline" onClick={resetTransferDialog}>Cancel</Button>
             <Button
               onClick={handleTransferConfirm}
-              disabled={!selectedRoomId}
+              disabled={!selectedRoomId || availableRooms.length === 0}
               className="bg-usf-green hover:bg-usf-darkGreen"
             >
               Transfer

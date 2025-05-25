@@ -83,6 +83,7 @@ export async function getAllEquipment(): Promise<Equipment[]> {
     .from("equipment_with_location")
     .select("*")
     .is("delete_reason", null) // Only get items that are not soft-deleted
+    .order("last_updated", { ascending: false }) // Most recently updated first
   
   if (error || !data) {
     console.error("Error fetching equipment:", error?.message)
