@@ -121,19 +121,3 @@ language sql security definer as $$
    where id = any(p_ids);
 $$;
 
--- permanently delete equipment older than cutoff date
-CREATE OR REPLACE FUNCTION permanently_delete_old_equipment(cutoff_date TIMESTAMPTZ)
-RETURNS INTEGER AS $$
-DECLARE
-  deleted_count INTEGER;
-BEGIN
-  -- Delete equipment that was soft-deleted before the cutoff date
-  DELETE FROM equipment 
-  WHERE delete_reason IS NOT NULL 
-    AND last_updated < cutoff_date;
-  
-  GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  
-  RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;

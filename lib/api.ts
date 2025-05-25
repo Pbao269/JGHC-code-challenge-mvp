@@ -82,8 +82,8 @@ export async function getAllEquipment(): Promise<Equipment[]> {
   const { data, error } = await supabase
     .from("equipment_with_location")
     .select("*")
-    .is("delete_reason", null) // Only get items that are not soft-deleted
-    .order("last_updated", { ascending: false }) // Most recently updated first
+    .is("delete_reason", null)
+    .order("last_updated", { ascending: false })
   
   if (error || !data) {
     console.error("Error fetching equipment:", error?.message)
@@ -97,8 +97,8 @@ export async function getDeletedEquipment(): Promise<Equipment[]> {
   const { data, error } = await supabase
     .from("equipment_with_location")
     .select("*")
-    .not("delete_reason", "is", null) // Only get items that are soft-deleted
-    .order("last_updated", { ascending: false }) // Most recently deleted first
+    .not("delete_reason", "is", null) 
+    .order("last_updated", { ascending: false })
   
   if (error || !data) {
     console.error("Error fetching deleted equipment:", error?.message)
