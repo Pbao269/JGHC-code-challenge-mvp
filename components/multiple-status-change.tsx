@@ -70,10 +70,11 @@ export default function MultipleStatusChange({
     <>
       <Button
         onClick={() => setIsDialogOpen(true)}
-        className="bg-usf-darkGreen hover:bg-usf-green text-white"
+        className="bg-usf-darkGreen hover:bg-usf-green text-white w-full sm:w-auto"
         disabled={!currentStatus || disabled}
       >
-        Change Status ({selectedItems.length})
+        <span className="hidden sm:inline">Change Status ({selectedItems.length})</span>
+        <span className="sm:hidden">Status ({selectedItems.length})</span>
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

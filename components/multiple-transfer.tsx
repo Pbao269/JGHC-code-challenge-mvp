@@ -108,10 +108,11 @@ export default function MultipleTransfer({
     <>
       <Button 
         onClick={() => setIsDialogOpen(true)} 
-        className="bg-usf-darkGreen hover:bg-usf-green text-white"
+        className="bg-usf-darkGreen hover:bg-usf-green text-white w-full sm:w-auto"
         disabled={disabled}
       >
-        Transfer {selectedItems.length} Items
+        <span className="hidden sm:inline">Transfer {selectedItems.length} Items</span>
+        <span className="sm:hidden">Transfer ({selectedItems.length})</span>
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

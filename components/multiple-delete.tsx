@@ -55,11 +55,12 @@ export default function MultipleDelete({
       <div className="relative group">
         <Button
           onClick={() => setIsDialogOpen(true)}
-          className="bg-red-600 hover:bg-red-700 text-white"
+          className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
           disabled={selectedWarehouseItems.length === 0 || disabled}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Delete ({selectedWarehouseItems.length})
+          <span className="hidden sm:inline">Delete ({selectedWarehouseItems.length})</span>
+          <span className="sm:hidden">Del ({selectedWarehouseItems.length})</span>
         </Button>
         {selectedItems.length > 0 && selectedWarehouseItems.length < selectedItems.length && (
           <div className="absolute left-0 -bottom-10 z-50 w-60 p-2 bg-amber-50 text-amber-800 text-xs rounded shadow-md border border-amber-200">

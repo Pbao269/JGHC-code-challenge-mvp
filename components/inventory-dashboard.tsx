@@ -446,10 +446,10 @@ export default function InventoryDashboard() {
 
   // Render the dashboard UI
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
+          <p className="text-sm sm:text-base">{error}</p>
           <Button 
             className="mt-2" 
             variant="outline" 
@@ -466,99 +466,103 @@ export default function InventoryDashboard() {
         </div>
       )}
       
-      <div className="bg-usf-green text-white p-6 rounded-lg shadow-md">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">USF Inventory Management</h1>
-            <p className="text-usf-lightGold mt-1">Track and manage university equipment by room</p>
-          </div>
-          <div className="flex gap-2">
-            {!isMultipleSelect ? (
-              <>
-                <Button
-                  onClick={() => setIsAddingEquipment(true)}
-                  className="bg-usf-gold hover:bg-usf-darkGold text-usf-darkGreen"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Equipment
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Advanced
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => toggleMultipleSelect("transfer")}>
-                      <MoveRight className="mr-2 h-4 w-4" />
-                      Multiple Transfer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleMultipleSelect("status")}>
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Multiple Status Change
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleMultipleSelect("delete")}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Multiple Delete
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowDeletedItems(true)}>
-                      <Archive className="mr-2 h-4 w-4" />
-                      View Deleted Items
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="bg-white/10 text-white"
-                  onClick={cancelMultipleSelect}
-                >
-                  <FilterX className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                {multipleAction === "transfer" && (
-                  <MultipleTransfer
-                    selectedItems={selectedItems}
-                    equipment={equipment}
-                    onTransfer={handleMultipleTransfer}
-                    disabled={selectedItems.length === 0}
-                  />
-                )}
-                {multipleAction === "status" && (
-                  <MultipleStatusChange
-                    selectedItems={selectedItems}
-                    equipment={equipment}
-                    onStatusChange={handleMultipleStatusChange}
-                    disabled={selectedItems.length === 0}
-                  />
-                )}
-                {multipleAction === "delete" && (
-                  <MultipleDelete
-                    selectedItems={selectedItems}
-                    equipment={equipment}
-                    onDelete={handleMultipleDelete}
-                    disabled={selectedItems.length === 0}
-                  />
-                )}
-              </div>
-            )}
+      <div className="bg-usf-green text-white p-4 sm:p-6 rounded-lg shadow-md">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold">USF Inventory Management</h1>
+              <p className="text-usf-lightGold mt-1 text-sm sm:text-base">Track and manage university equipment by room</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {!isMultipleSelect ? (
+                <>
+                  <Button
+                    onClick={() => setIsAddingEquipment(true)}
+                    className="bg-usf-gold hover:bg-usf-darkGold text-usf-darkGreen w-full sm:w-auto"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Equipment
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 w-full sm:w-auto">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Advanced
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => toggleMultipleSelect("transfer")}>
+                        <MoveRight className="mr-2 h-4 w-4" />
+                        Multiple Transfer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleMultipleSelect("status")}>
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        Multiple Status Change
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleMultipleSelect("delete")}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Multiple Delete
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowDeletedItems(true)}>
+                        <Archive className="mr-2 h-4 w-4" />
+                        View Deleted Items
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 w-full sm:w-auto"
+                    onClick={cancelMultipleSelect}
+                  >
+                    <FilterX className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <div className="w-full sm:w-auto">
+                    {multipleAction === "transfer" && (
+                      <MultipleTransfer
+                        selectedItems={selectedItems}
+                        equipment={equipment}
+                        onTransfer={handleMultipleTransfer}
+                        disabled={selectedItems.length === 0}
+                      />
+                    )}
+                    {multipleAction === "status" && (
+                      <MultipleStatusChange
+                        selectedItems={selectedItems}
+                        equipment={equipment}
+                        onStatusChange={handleMultipleStatusChange}
+                        disabled={selectedItems.length === 0}
+                      />
+                    )}
+                    {multipleAction === "delete" && (
+                      <MultipleDelete
+                        selectedItems={selectedItems}
+                        equipment={equipment}
+                        onDelete={handleMultipleDelete}
+                        disabled={selectedItems.length === 0}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-usf-green">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
-              <Boxes className="mr-2 h-4 w-4 text-usf-green" />
-              Warehouse
+              <Boxes className="mr-2 h-4 w-4 text-usf-green flex-shrink-0" />
+              <span className="truncate">Warehouse</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
+            <p className="text-xl sm:text-2xl font-bold">
               {equipment.filter((item) => item.buildingType === "warehouse").length}
             </p>
           </CardContent>
@@ -566,46 +570,47 @@ export default function InventoryDashboard() {
         <Card className="border-l-4 border-l-usf-gold">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
-              <School className="mr-2 h-4 w-4 text-usf-gold" />
-              Classroom
+              <School className="mr-2 h-4 w-4 text-usf-gold flex-shrink-0" />
+              <span className="truncate">Classroom</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
+            <p className="text-xl sm:text-2xl font-bold">
               {equipment.filter((item) => item.buildingType === "classroom").length}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-usf-lightGreen">
+        <Card className="border-l-4 border-l-usf-lightGreen sm:col-span-2 lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
-              <Building2 className="mr-2 h-4 w-4 text-usf-lightGreen" />
-              Office
+              <Building2 className="mr-2 h-4 w-4 text-usf-lightGreen flex-shrink-0" />
+              <span className="truncate">Office</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
+            <p className="text-xl sm:text-2xl font-bold">
               {equipment.filter((item) => item.buildingType === "office").length}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-          <div className="relative w-full md:w-64">
+      <div className="flex flex-col gap-4">
+        {/* Search and Status Filter Row */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search equipment..."
-              className="pl-8"
+              className="pl-8 w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex-shrink-0 w-full sm:w-auto">
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as EquipmentStatus | "all")}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -620,50 +625,73 @@ export default function InventoryDashboard() {
           </div>
         </div>
 
-        <Tabs
-          defaultValue="all"
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as BuildingType | "all")}
-          className="w-full md:w-auto"
-        >
-          <TabsList className="grid grid-cols-4 w-full md:w-[450px]">
-            <TabsTrigger value="all" className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3">
-              All ({equipment.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="warehouse"
-              className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
-            >
-              Warehouse ({equipment.filter((item) => item.buildingType === "warehouse").length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="classroom"
-              className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
-            >
-              Classroom ({equipment.filter((item) => item.buildingType === "classroom").length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="office"
-              className="data-[state=active]:bg-usf-green data-[state=active]:text-white px-3"
-            >
-              Office ({equipment.filter((item) => item.buildingType === "office").length})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Location Filter Tabs Row */}
+        <div className="w-full">
+          <Tabs
+            defaultValue="all"
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as BuildingType | "all")}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto p-1 gap-1">
+              <TabsTrigger 
+                value="all" 
+                className="data-[state=active]:bg-usf-green data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-3 py-2 min-w-0 flex-1"
+              >
+                <span className="truncate">
+                  <span className="hidden sm:inline">All </span>
+                  ({equipment.length})
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="warehouse"
+                className="data-[state=active]:bg-usf-green data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-3 py-2 min-w-0 flex-1"
+              >
+                <span className="truncate">
+                  <span className="hidden sm:inline">Warehouse </span>
+                  <span className="sm:hidden">WH </span>
+                  ({equipment.filter((item) => item.buildingType === "warehouse").length})
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="classroom"
+                className="data-[state=active]:bg-usf-green data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-3 py-2 min-w-0 flex-1"
+              >
+                <span className="truncate">
+                  <span className="hidden sm:inline">Classroom </span>
+                  <span className="sm:hidden">CR </span>
+                  ({equipment.filter((item) => item.buildingType === "classroom").length})
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="office"
+                className="data-[state=active]:bg-usf-green data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-3 py-2 min-w-0 flex-1"
+              >
+                <span className="truncate">
+                  <span className="hidden sm:inline">Office </span>
+                  <span className="sm:hidden">OF </span>
+                  ({equipment.filter((item) => item.buildingType === "office").length})
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <EquipmentTable
-            equipment={filteredEquipment}
-            onEdit={setEditingEquipment}
-            onDelete={handleDeleteEquipment}
-            onTransfer={handleTransferEquipment}
-            isMultipleSelect={isMultipleSelect}
-            selectedItems={selectedItems}
-            setSelectedItems={setSelectedItems}
-            multipleAction={multipleAction}
-          />
+          <div className="overflow-x-auto">
+            <EquipmentTable
+              equipment={filteredEquipment}
+              onEdit={setEditingEquipment}
+              onDelete={handleDeleteEquipment}
+              onTransfer={handleTransferEquipment}
+              isMultipleSelect={isMultipleSelect}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+              multipleAction={multipleAction}
+            />
+          </div>
         </CardContent>
       </Card>
 
